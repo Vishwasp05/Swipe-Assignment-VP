@@ -12,7 +12,7 @@ import SwiftData
 struct Swipe_Assignment_VPApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            ProductModel.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +25,7 @@ struct Swipe_Assignment_VPApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ListingsHomeScreen(vm: ProductViewModel())
         }
         .modelContainer(sharedModelContainer)
     }
