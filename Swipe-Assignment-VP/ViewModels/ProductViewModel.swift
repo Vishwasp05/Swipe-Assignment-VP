@@ -8,6 +8,7 @@
 import SwiftUI
 
 class ProductViewModel: ObservableObject {
+    // Published Props
     @Published var products: [ProductModel] = []
     @Published var errorDescription: String?
     @Published var isLoading: Bool = false
@@ -18,6 +19,8 @@ class ProductViewModel: ObservableObject {
         fetchProducts()
     }
     
+    /// Deals with making a `GET` request from the provided endpoint and populates the `products` array.
+    /// Handles all sorts of errors
     func fetchProducts() {
         isLoading = true
         

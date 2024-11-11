@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import SwiftData
 
+/// This class models that Product object that we send and receive from the remote server
 @Model
 final class ProductModel: Codable {
     var productName: String
@@ -63,3 +64,5 @@ final class ProductModel: Codable {
         return Image(uiImage: uiImage)
     }
 }
+
+

@@ -122,6 +122,11 @@ struct IndividualProductCardView: View {
         }
         .frame(width: 350 , height: 300)
     }
+    /// Implements the favourite functionality
+    ///
+    /// Works by creating a temp array -> Removes the particular product that was favourited -> Inserts said object at the front of the temp array
+    /// -> and finally updates the `products` array in the ViewModel
+    /// - Parameter product: Takes in instance of the `ProductModel`
      func processFavourite(product: ProductModel) {
         var tempProduct = vm.products
         tempProduct.removeAll(where:{ $0 == product})

@@ -11,7 +11,7 @@ import PhotosUI
 struct NewProductEntryView: View {
     // State vars
     @State private var selectedImage: PhotosPickerItem?
-    @State private var productType: String = ""
+    @State private var productType: String = "Select a product"
     @State private var productName: String = ""
     @State private var tax: String = ""
     @State private var price: String = ""
@@ -20,7 +20,8 @@ struct NewProductEntryView: View {
     @State private var uploadSucess: Bool = false
     @State private var didNotPassValidation: Bool = false
     @State private var validationError: String = ""
-    
+    @State private var noInternetErrorAlert = false
+    @Binding var isConnected: Bool
     
     // Env Vars
     @Environment(\.dismiss) var dismiss
@@ -59,9 +60,73 @@ struct NewProductEntryView: View {
             
             // Product Name
             GenericTFView(tfTitle: "E.g. Carrot", imageName: "carrot", textBinding: $productName, needsFiltering: false, callout: "Name of Product", keyboardType: .default)
+
             
-            // Product Type
-            GenericTFView(tfTitle: "E.g. Farm Produce", imageName: "tray", textBinding: $productType, needsFiltering: false, callout: "Type of Product", keyboardType: .default)
+            ZStack{
+                
+                
+                Menu {
+                    Button("Product", action: {
+                        productType = "Product"
+                    })
+                    Button("Phone", action: {
+                        productType = "Phone"
+                    })
+                    Button("Laptop", action: {
+                        productType = "Laptop"
+                    })
+                    Button("Mobile", action: {
+                        productType = "Mobile"
+                    })
+                    Button("Electronics", action: {
+                        productType = "Electronics"
+                    })
+                    Button("Vehicles", action: {
+                        productType = "Vehicles"
+                    })
+                    Button("Grocery", action: {
+                        productType = "Grocery"
+                    })
+                    Button("Fruit", action: {
+                        productType = "Fruit"
+                    })
+                    Button("Home Appliances", action: {
+                        productType = "Home Appliances"
+                    })
+                    Button("Entertainment", action: {
+                        productType = "Entertainment"
+                    })
+                    Button("Service", action: {
+                        productType = "Service"
+                    })
+                    Button("Clothing", action: {
+                        productType = "Clothing"
+                    })
+                }  label: {
+                    HStack{
+                        VStack{
+                            HStack {
+                                Text("Type of Price")
+                                    .foregroundStyle(.black)
+                                Spacer()
+                            }
+                            ZStack{
+                                RoundedRectangle(cornerRadius: 18)
+                                    .foregroundStyle(.gray.opacity(0.3))
+                                HStack{
+                                    Text(productType)
+                                        .padding(.leading, 9)
+                                        .foregroundStyle(.gray)
+                                    Spacer()
+                                }
+                            }
+                        }
+                        .frame(width: 300 , height: 75)
+                    }
+                }
+                
+                
+            }
             
             // Price
             GenericTFView(tfTitle: "E.g. ₹100", imageName: "dollarsign.square", textBinding: $price, needsFiltering: false, callout: "Price of Product", keyboardType: .decimalPad)
@@ -70,7 +135,7 @@ struct NewProductEntryView: View {
             GenericTFView(tfTitle: "E.g. 12%", imageName: "building.columns", textBinding: $tax, needsFiltering: false, callout: "Tax on Product", keyboardType: .decimalPad)
             
             Button {
-                if performValidation() {
+                if performValidation() && NetworkManagerSingleton.shared.isConnected {
                     Task {
                         if let selectedItem = selectedImage {
                             do {
@@ -101,7 +166,10 @@ struct NewProductEntryView: View {
                                 print("Error loading image data: \(error)")
                             }
                         }
+                        self.productType = ""
                     }
+                } else {
+                    noInternetErrorAlert = true
                 }
             } label: {
                 ZStack {
@@ -123,7 +191,7 @@ struct NewProductEntryView: View {
             Task {
                 if let selectedItem = newItem {
                     do {
-                        // Load the selected image as UIImage for display
+
                         if let data = try await selectedItem.loadTransferable(type: Data.self),
                            let uiImage = UIImage(data: data) {
                             self.uiImage = uiImage
@@ -142,6 +210,11 @@ struct NewProductEntryView: View {
                 
             }
         }
+        .alert("Plese check your Internet Connection and try again", isPresented: $isConnected) {
+            Button("Okay", role: .cancel) {
+                                
+            }
+        }
         .alert("\(validationError)", isPresented: $didNotPassValidation) {
             Button("Okay", role: .cancel) {
                 // reset value
@@ -150,7 +223,9 @@ struct NewProductEntryView: View {
             }
         }
     }
-
+    
+    /// Function to perform basic form validation, when a user submits a new product request
+    /// - Returns: Returns a `Boolean` value, based on which its decided to go ahead with the network call or not. 
     func performValidation() -> Bool {
         // check - all fields filled
         guard !productName.isEmpty, !price.isEmpty, !tax.isEmpty, !productType.isEmpty else  {
@@ -183,3 +258,12 @@ struct NewProductEntryView: View {
     }
 
 }
+
+#Preview {
+    NewProductEntryView(isConnected: .constant(false))
+    
+    
+}
+
+
+
