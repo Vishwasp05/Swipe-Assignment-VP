@@ -17,10 +17,13 @@ struct NewProductEntryView: View {
     @State private var price: String = ""
     @State private var selectedImageData: Data?
     @State private var uiImage: UIImage?
-    @State private var uploadSucess: Bool = false
+    @State private var uploadSuccess: Bool = false
     @State private var didNotPassValidation: Bool = false
     @State private var validationError: String = ""
-    @State private var noInternetErrorAlert = false
+    @State private var showAlert: Bool = false
+    @State private var alertMessage: String = ""
+    @State private var alertTitle: String = ""
+    @State private var isUploading: Bool = false
     @Binding var isConnected: Bool
     
     // Env Vars
@@ -56,64 +59,34 @@ struct NewProductEntryView: View {
                         .font(.title2)
                 }
             }
+            .disabled(isUploading)
+            
             Spacer()
             
             // Product Name
             GenericTFView(tfTitle: "E.g. Carrot", imageName: "carrot", textBinding: $productName, needsFiltering: false, callout: "Name of Product", keyboardType: .default)
-
+                .disabled(isUploading)
             
-            ZStack{
-                
-                
+            // Product Type Menu
+            ZStack {
                 Menu {
-                    Button("Product", action: {
-                        productType = "Product"
-                    })
-                    Button("Phone", action: {
-                        productType = "Phone"
-                    })
-                    Button("Laptop", action: {
-                        productType = "Laptop"
-                    })
-                    Button("Mobile", action: {
-                        productType = "Mobile"
-                    })
-                    Button("Electronics", action: {
-                        productType = "Electronics"
-                    })
-                    Button("Vehicles", action: {
-                        productType = "Vehicles"
-                    })
-                    Button("Grocery", action: {
-                        productType = "Grocery"
-                    })
-                    Button("Fruit", action: {
-                        productType = "Fruit"
-                    })
-                    Button("Home Appliances", action: {
-                        productType = "Home Appliances"
-                    })
-                    Button("Entertainment", action: {
-                        productType = "Entertainment"
-                    })
-                    Button("Service", action: {
-                        productType = "Service"
-                    })
-                    Button("Clothing", action: {
-                        productType = "Clothing"
-                    })
-                }  label: {
-                    HStack{
-                        VStack{
+                    ForEach(["Product", "Phone", "Laptop", "Mobile", "Electronics", "Vehicles", "Grocery", "Fruit", "Home Appliances", "Entertainment", "Service", "Clothing"], id: \.self) { type in
+                        Button(type) {
+                            productType = type
+                        }
+                    }
+                } label: {
+                    HStack {
+                        VStack {
                             HStack {
                                 Text("Type of Price")
                                     .foregroundStyle(.black)
                                 Spacer()
                             }
-                            ZStack{
+                            ZStack {
                                 RoundedRectangle(cornerRadius: 18)
                                     .foregroundStyle(.gray.opacity(0.3))
-                                HStack{
+                                HStack {
                                     Text(productType)
                                         .padding(.leading, 9)
                                         .foregroundStyle(.gray)
@@ -121,21 +94,30 @@ struct NewProductEntryView: View {
                                 }
                             }
                         }
-                        .frame(width: 300 , height: 75)
+                        .frame(width: 300, height: 75)
                     }
                 }
-                
-                
             }
+            .disabled(isUploading)
             
-            // Price
+            // Price and Tax Fields
             GenericTFView(tfTitle: "E.g. ₹100", imageName: "dollarsign.square", textBinding: $price, needsFiltering: false, callout: "Price of Product", keyboardType: .decimalPad)
-            
-            // Tax
+                .disabled(isUploading)
             GenericTFView(tfTitle: "E.g. 12%", imageName: "building.columns", textBinding: $tax, needsFiltering: false, callout: "Tax on Product", keyboardType: .decimalPad)
+                .disabled(isUploading)
             
+            // Add Product Button
             Button {
-                if performValidation() && NetworkManagerSingleton.shared.isConnected {
+                if !isConnected {
+                    showAlert(title: "No Internet Connection", message: "Please check your Internet Connection and try again")
+                    return
+                }
+                
+                if performValidation() {
+                    withAnimation {
+                        isUploading = true
+                    }
+                    
                     Task {
                         if let selectedItem = selectedImage {
                             do {
@@ -152,37 +134,50 @@ struct NewProductEntryView: View {
                                         with: "https://app.getswipe.in/api/public/add",
                                         product: newProduct
                                     ) { result in
-                                        switch result {
-                                        case .success:
-                                                // TODO: Add ability to send an alert
-                                                uploadSucess = true
-                                            print("Product added successfully")
-                                        case .failure(let error):
-                                            print("Error adding product: \(error.localizedDescription)")
+                                        DispatchQueue.main.async {
+                                            withAnimation {
+                                                isUploading = false
+                                            }
+                                            
+                                            switch result {
+                                            case .success:
+                                                showAlert(title: "Success", message: "Product added successfully")
+                                            case .failure(let error):
+                                                showAlert(title: "Error", message: "Error adding product: \(error.localizedDescription)")
+                                            }
                                         }
                                     }
                                 }
                             } catch {
-                                print("Error loading image data: \(error)")
+                                DispatchQueue.main.async {
+                                    withAnimation {
+                                        isUploading = false
+                                    }
+                                    showAlert(title: "Error", message: "Error loading image data: \(error.localizedDescription)")
+                                }
                             }
                         }
-                        self.productType = ""
                     }
-                } else {
-                    noInternetErrorAlert = true
                 }
             } label: {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
                         .frame(width: 200, height: 65)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(isUploading ? .gray : .orange)
                     
-                    Text("Add Product")
-                        .foregroundStyle(.white)
-                        .font(.title)
-                        .bold()
+                    if isUploading {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.5)
+                    } else {
+                        Text("Add Product")
+                            .foregroundStyle(.white)
+                            .font(.title)
+                            .bold()
+                    }
                 }
             }
+            .disabled(isUploading)
             .padding(.top, 20)
             
             Spacer()
@@ -191,79 +186,62 @@ struct NewProductEntryView: View {
             Task {
                 if let selectedItem = newItem {
                     do {
-
                         if let data = try await selectedItem.loadTransferable(type: Data.self),
                            let uiImage = UIImage(data: data) {
-                            self.uiImage = uiImage
-                            self.selectedImageData = data
+                            await MainActor.run {
+                                self.uiImage = uiImage
+                                self.selectedImageData = data
+                            }
                         }
                     } catch {
-                        print("Error loading image data: \(error)")
+                        await MainActor.run {
+                            showAlert(title: "Error", message: "Error loading image data: \(error.localizedDescription)")
+                        }
                     }
                 }
             }
         }
-        .alert("Product added sucessfully", isPresented: $uploadSucess) {
-            Button("Okay", role: .cancel) {
-                // do nothing as of now
-                dismiss()
-                
+        .alert(alertTitle, isPresented: $showAlert) {
+            Button("OK", role: .cancel) {
+                if alertTitle == "Success" {
+                    dismiss()
+                }
             }
+        } message: {
+            Text(alertMessage)
         }
-        .alert("Plese check your Internet Connection and try again", isPresented: $isConnected) {
-            Button("Okay", role: .cancel) {
-                                
-            }
-        }
-        .alert("\(validationError)", isPresented: $didNotPassValidation) {
-            Button("Okay", role: .cancel) {
-                // reset value
-                didNotPassValidation = false
-                
-            }
-        }
+        .disabled(isUploading)
     }
     
-    /// Function to perform basic form validation, when a user submits a new product request
-    /// - Returns: Returns a `Boolean` value, based on which its decided to go ahead with the network call or not. 
+    private func showAlert(title: String, message: String) {
+        alertTitle = title
+        alertMessage = message
+        showAlert = true
+    }
+    
     func performValidation() -> Bool {
-        // check - all fields filled
-        guard !productName.isEmpty, !price.isEmpty, !tax.isEmpty, !productType.isEmpty else  {
-            didNotPassValidation = true
-            validationError = "Empty fields are not allowed ☹️"
+        if productName.isEmpty || price.isEmpty || tax.isEmpty || productType == "Select a product" {
+            showAlert(title: "Validation Error", message: "Empty fields are not allowed ☹️")
             return false
         }
-        
-        // check if image selected/not
         
         if selectedImageData == nil {
-            validationError = "Please select an image🌅"
-            didNotPassValidation = true
+            showAlert(title: "Validation Error", message: "Please select an image 🌅")
             return false
         }
         
-
-        // price / tax field should only have numbers
         let priceCheck = price.allSatisfy { $0.isNumber }
         let taxCheck = tax.allSatisfy { $0.isNumber }
-
+        
         if !priceCheck || !taxCheck {
-            didNotPassValidation = true
-            validationError = "Only numbers are allowed in price and tax fields 🫣"
+            showAlert(title: "Validation Error", message: "Only numbers are allowed in price and tax fields 🫣")
             return false
         }
-
-        didNotPassValidation = false
+        
         return true
     }
-
 }
 
 #Preview {
-    NewProductEntryView(isConnected: .constant(false))
-    
-    
+    NewProductEntryView(isConnected: .constant(true))
 }
-
-
-
